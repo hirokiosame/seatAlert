@@ -1,5 +1,7 @@
 #seatAlert
-##Enter the command
+Simple python script to watch courses for open seats!
+
+##How to Run
 	python ./seatAlert.py
 
 1. Enter BU username
@@ -12,8 +14,7 @@ Make a blank submission if you have less than 5 courses.
 Press "Control + c"
 
 
-##Run in Background?
-###Enter the command
+##Run in the Background?
 	screen python ./seatAlert.py
 
 ###To leave the "screen"
