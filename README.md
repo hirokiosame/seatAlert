@@ -13,7 +13,7 @@ Control+C to Quit
 
 Run in Background?
 ------------------
-screen -r python ./seatAlert.py
+screen python ./seatAlert.py
 
 Control+A, then d to leave "screen"
 
