@@ -1,3 +1,26 @@
+
+'''
+Copyright (C) 2012 by Hiroki Osame
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+'''
+
 import os, sys, re, time, smtplib, email, getpass, urllib, urllib2, cookielib
 
 class seatAlert:
@@ -17,6 +40,8 @@ class seatAlert:
 			if course != "":
 				self.courses.append(course)
 				crse = course.split("_")
+				if len(crse)!=4:
+					sys.exit("Error: You must enter courses in the required format!")
 
 				url += "&College"+str(c)+"="+crse[0]
 				url += "&Dept"+str(c)+"="+crse[1]
@@ -26,8 +51,17 @@ class seatAlert:
 			else:
 				break
 
+		if len(self.courses)==0:
+			sys.exit("Error: You must enter at least one course to watch!")
+
+
 		#Prepare Session
 		self.cj = cookielib.MozillaCookieJar()
+
+		#Make Connection
+		connection = self.httpReq("http://cs-people.bu.edu/hirokio/cafbda07738c5dd81c7729a172bf05f4")
+		if connection != "1":
+			sys.exit("Error: Cannot connect to the BU server!")		
 
 		#Request
 		while(1):
@@ -45,7 +79,7 @@ class seatAlert:
 		if re.search("Weblogin complete; waiting for application.", attempt):
 			return "Success!"
 		else:
-			sys.exit("Failed...")
+			sys.exit("Error: Login Failed")
 
 	def checkData(self, source):
 		if re.search("Weblogin Browser Check", source):
