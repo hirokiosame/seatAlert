@@ -24,16 +24,21 @@ import os, sys, re, time, smtplib, email, getpass, urllib, urllib2, cookielib
 
 class seatAlert:
 	def __init__(self):
-
 		#Inquire Credentials
 		self.buUn = urllib.quote_plus(raw_input("BU Username: "))
 		self.buPw = urllib.quote_plus(getpass.getpass("BU Password: "))
 
+		#Prepare Session
+		self.cj = cookielib.MozillaCookieJar()
+
+		#Login
+		print self.login()
+
 		#Inquire Courses
 		self.courses = []
-		url  = "https://www.bu.edu/link/bin/uiscgi_studentlink.pl/?ModuleName=reg%2Fadd%2Fbrowse_schedule.pl&SearchOptionCd=N&KeySem=20134&CurrentCoreInd=N"
+		url  = "https://www.bu.edu/link/bin/uiscgi_studentlink.pl/?ModuleName=reg%2Fadd%2Fbrowse_schedule.pl&SearchOptionCd=N&KeySem="+self.getKeysem()+"&CurrentCoreInd=N"
 
-		print("Enter your courses in format:\n\tCollege_Department_Course_Section\n\teg. CAS CS 330 A1");
+		print("Enter your courses in format:\n\tCollege Department Course Section\n\teg. CAS CS 330 A1");
 		for c in range(1, 6):
 			course = raw_input("Course "+str(c)+": ")
 			if course != "":
@@ -53,43 +58,41 @@ class seatAlert:
 		if len(self.courses)==0:
 			sys.exit("Error: You must enter at least one course to watch!")
 
-
-		#Prepare Session
-		self.cj = cookielib.MozillaCookieJar()
-
-		#Make Connection
-		connection = self.httpReq("http://cs-people.bu.edu/hirokio/cafbda07738c5dd81c7729a172bf05f4")
-		if connection != "1":
-			sys.exit("Error: Cannot connect to the BU server!")		
-
 		#Request
 		while(1):
 			self.checkData(self.httpReq(url))
 			time.sleep(60)
 
-
 	def login(self):
 		print "Logging in..."
 		attempt =	self.httpReq(
+						"https://weblogin.bu.edu/web@login3//1e9f0613b3f2fbb96f5e1f72c21f634f:cussp-srv3/key=1356354396.25235",
 						"https://weblogin.bu.edu//web@login3",
-						"https://weblogin.bu.edu//web@login3",
-						"p=&act=up&js=yes&jserror=&c2f=&r2f=&user="+self.buUn+"&pw2="+self.buPw+"&pw="+self.buPw
+						"p=&act=up&js=yes&jserror=&c2f=&r2f=&user="+self.buUn+"&pw="+self.buPw
 					)
 		if re.search("Weblogin complete; waiting for application.", attempt):
 			return "Success!"
 		else:
 			sys.exit("Error: Login Failed")
 
+	def getKeysem(self):
+		keysem = self.httpReq("https://www.bu.edu/link/bin/uiscgi_studentlink.pl/?ModuleName=regsched.pl")
+		match = re.findall("&KeySem=(\d+)", keysem)
+		return match[0]
+
 	def checkData(self, source):
 		if re.search("Weblogin Browser Check", source):
 			print self.login()
 		else:
 			match = re.findall("\<td\>\s+(\d+)\<\/td\>", source)
-			print( time.asctime(time.localtime(time.time())) )
+			print time.asctime()
 			for i, s in enumerate(match):
 				print "\t"+self.courses[i]+" has "+s+" seat(s)"
 				if 0<int(s) :
 					self.alert(self.courses[i]+" has "+s+" seat(s)")
+			#Keep Connection Alive
+			if self.httpReq("http://cs-people.bu.edu/hirokio/cafbda07738c5dd81c7729a172bf05f4") != "1":
+				sys.exit("Error: Cannot connect to the BU server!")
 
 	def alert(self, message):
 		msg = email.MIMEMultipart.MIMEMultipart()
