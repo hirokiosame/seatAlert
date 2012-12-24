@@ -33,12 +33,12 @@ class seatAlert:
 		self.courses = []
 		url  = "https://www.bu.edu/link/bin/uiscgi_studentlink.pl/?ModuleName=reg%2Fadd%2Fbrowse_schedule.pl&SearchOptionCd=N&KeySem=20134&CurrentCoreInd=N"
 
-		print("Enter your courses in format:\n\tCollege_Department_Course_Section\n\teg. CAS_CS_330_A1");
+		print("Enter your courses in format:\n\tCollege_Department_Course_Section\n\teg. CAS CS 330 A1");
 		for c in range(1, 6):
 			course = raw_input("Course "+str(c)+": ")
 			if course != "":
 				self.courses.append(course)
-				crse = course.split("_")
+				crse = course.split(" ")
 				if len(crse)!=4:
 					sys.exit("Error: You must enter courses in the required format!")
 
