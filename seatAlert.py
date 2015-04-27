@@ -1,3 +1,5 @@
+#!/usr/local/bin/python
+
 '''
 Copyright (C) 2012 by Hiroki Osame
 
@@ -23,7 +25,10 @@ THE SOFTWARE.
 import os, sys, re, time, smtplib, email, getpass, urllib, urllib2, cookielib
 
 class seatAlert:
+
+
 	def __init__(self):
+
 		#Inquire Credentials
 		self.buUn = urllib.quote_plus(raw_input("BU Username: "))
 		self.buPw = urllib.quote_plus(getpass.getpass("BU Password: "))
@@ -34,9 +39,12 @@ class seatAlert:
 		#Login
 		print self.login()
 
+		#Semester
+		self.getKeysem()
+
 		#Inquire Courses
 		self.courses = []
-		url  = "https://www.bu.edu/link/bin/uiscgi_studentlink.pl/?ModuleName=reg%2Fadd%2Fbrowse_schedule.pl&SearchOptionCd=N&KeySem="+self.getKeysem()+"&CurrentCoreInd=N"
+		url  = "https://www.bu.edu/link/bin/uiscgi_studentlink.pl/?ModuleName=reg%2Fadd%2Fbrowse_schedule.pl&SearchOptionCd=N&KeySem="+self.semester[1]+"&CurrentCoreInd=N"
 
 		print("Enter your courses in format:\n\tCollege Department Course Section\n\teg. CAS CS 330 A1");
 		for c in range(1, 6):
@@ -45,7 +53,7 @@ class seatAlert:
 				self.courses.append(course)
 				crse = course.split(" ")
 				if len(crse)!=4:
-					sys.exit("Error: You must enter courses in the required format!")
+					sys.exit("Error: You must enter courses in the specified format!")
 
 				url += "&College"+str(c)+"="+crse[0]
 				url += "&Dept"+str(c)+"="+crse[1]
@@ -62,12 +70,25 @@ class seatAlert:
 		while(1):
 			self.checkData(self.httpReq(url))
 			time.sleep(60)
+		
+	def getKeysem(self):
+		getSemesters = self.httpReq("https://www.bu.edu/link/bin/uiscgi_studentlink.pl/?ModuleName=regsched.pl")
+		match = list(set(re.findall("ViewSem=([^&]+)&KeySem=(\d+)", getSemesters)))
+
+		print("Available Semesters:")
+		for i, semKey in enumerate(match):
+			semester, key = semKey
+			print( "\t"+str(i+1)+". "+urllib2.unquote(semester.encode("utf8")) )
+		semester = int(raw_input("Pick Semester (eg. 1): ")) - 1
+		self.semester = match[semester] if 0 <= semester and semester < len(match) else sys.exit("Please pick a semester")
+
 
 	def login(self):
 		print "Logging in..."
+		getSession = self.httpReq("https://www.bu.edu/login")
 		attempt =	self.httpReq(
-						"https://weblogin.bu.edu/web@login3//1e9f0613b3f2fbb96f5e1f72c21f634f:cussp-srv3/key=1356354396.25235",
-						"https://weblogin.bu.edu//web@login3",
+						"https://weblogin.bu.edu//web@login3?jsv=1.5p&br=un&fl=0",
+						"https://weblogin.bu.edu//web@login3?jsv=1.5p&br=un&fl=0",
 						"p=&act=up&js=yes&jserror=&c2f=&r2f=&user="+self.buUn+"&pw="+self.buPw
 					)
 		if re.search("Weblogin complete; waiting for application.", attempt):
@@ -75,10 +96,7 @@ class seatAlert:
 		else:
 			sys.exit("Error: Login Failed")
 
-	def getKeysem(self):
-		keysem = self.httpReq("https://www.bu.edu/link/bin/uiscgi_studentlink.pl/?ModuleName=regsched.pl")
-		match = re.findall("&KeySem=(\d+)", keysem)
-		return match[0]
+
 
 	def checkData(self, source):
 		if re.search("Weblogin Browser Check", source):
@@ -89,18 +107,21 @@ class seatAlert:
 			for i, s in enumerate(match):
 				print "\t"+self.courses[i]+" has "+s+" seat(s)"
 				if 0<int(s) :
-					self.alert(self.courses[i]+" has "+s+" seat(s)")
+					course = self.courses[i].split(" ")
+					link = "https://www.bu.edu/link/bin/uiscgi_studentlink.pl/?ModuleName=reg%2Fadd%2Fbrowse_schedule.pl&SearchOptionCd=S&KeySem="+self.semester[1]+"&CurrentCoreInd=N&College="+course[0]+"&Dept="+course[1]+"&Course="+course[2]+"&Section="+course[3]
+					self.alert(self.courses[i]+" has "+s+" seat(s)", "<a href='"+link+"'>Register!</a>")
 			#Keep Connection Alive
 			if self.httpReq("http://cs-people.bu.edu/hirokio/cafbda07738c5dd81c7729a172bf05f4") != "1":
 				sys.exit("Error: Cannot connect to the BU server!")
 
-	def alert(self, message):
+
+	def alert(self, subject, message):
 		msg = email.MIMEMultipart.MIMEMultipart()
 
 		msg['From'] = self.buUn+"@bu.edu"
 		msg['To'] = self.buUn+"@bu.edu"
-		msg['Subject'] = message
-		msg.attach(email.MIMEText.MIMEText(message))
+		msg['Subject'] = subject
+		msg.attach(email.MIMEText.MIMEText(subject+"\n"+message, 'html'))
 
 		mailServer = smtplib.SMTP("smtp.gmail.com", 587)
 		mailServer.starttls()
@@ -122,7 +143,7 @@ class seatAlert:
 		req = urllib2.Request(url, post)
 
 		#Set User Agent
-		req.add_header('User-Agent', "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US) AppleWebKit/528.8 (KHTML, like Gecko) Chrome/2.0.156.0 Safari/528.8")
+		req.add_header('User-Agent', "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.8; rv:22.0) Gecko/20100101 Firefox/22.0")
 
 		#Add Referer
 		if referer!=False:
